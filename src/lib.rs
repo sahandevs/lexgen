@@ -12,7 +12,7 @@ mod nfa_to_dfa;
 mod range_map;
 mod regex_to_nfa;
 
-use ast::{Lexer, Regex, Rule, RuleLhs, RuleRhs, SingleRule, Var};
+use ast::{Lexer, Regex, Rule, RuleRhs, SingleRule, Var};
 use dfa::{StateIdx as DfaStateIdx, DFA};
 use nfa::NFA;
 use nfa_to_dfa::nfa_to_dfa;
@@ -63,10 +63,7 @@ pub fn lexer(input: TokenStream) -> TokenStream {
                     }
                     let mut nfa: NFA<RuleRhs> = NFA::new();
                     for SingleRule { lhs, rhs } in rules {
-                        match lhs {
-                            RuleLhs::Regex(re) => nfa.add_regex(&bindings, &re, rhs),
-                            RuleLhs::Fail => nfa.set_fail_action(rhs),
-                        }
+                        nfa.add_regex(&bindings, &lhs, rhs);
                     }
 
                     // println!("NFA=\n{}", nfa);
@@ -88,10 +85,7 @@ pub fn lexer(input: TokenStream) -> TokenStream {
                     let mut nfa: NFA<RuleRhs> = NFA::new();
 
                     for SingleRule { lhs, rhs } in rules {
-                        match lhs {
-                            RuleLhs::Regex(re) => nfa.add_regex(&bindings, &re, rhs),
-                            RuleLhs::Fail => nfa.set_fail_action(rhs),
-                        }
+                        nfa.add_regex(&bindings, &lhs, rhs);
                     }
 
                     // println!("NFA=\n{}", nfa);
@@ -117,10 +111,7 @@ pub fn lexer(input: TokenStream) -> TokenStream {
 
                 let mut nfa: NFA<RuleRhs> = NFA::new();
                 for SingleRule { lhs, rhs } in rules {
-                    match lhs {
-                        RuleLhs::Regex(re) => nfa.add_regex(&bindings, &re, rhs),
-                        RuleLhs::Fail => nfa.set_fail_action(rhs),
-                    }
+                    nfa.add_regex(&bindings, &lhs, rhs);
                 }
 
                 // println!("NFA=\n{}", nfa);

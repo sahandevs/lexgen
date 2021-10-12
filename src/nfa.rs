@@ -9,11 +9,6 @@ use fxhash::{FxHashMap, FxHashSet};
 pub struct NFA<A> {
     // Indexed by `StateIdx`
     states: Vec<State<A>>,
-
-    // Action for the "failure" state. In principle we could have many failure states and actions,
-    // but we only need one per NFA for lexing, so we have one action for the entire NFA. (NB. This
-    // is different in DFA)
-    fail: Option<A>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -24,6 +19,8 @@ struct State<A> {
     char_transitions: FxHashMap<char, FxHashSet<StateIdx>>,
     range_transitions: FxHashMap<(char, char), FxHashSet<StateIdx>>,
     empty_transitions: FxHashSet<StateIdx>,
+    any_transitions: FxHashSet<StateIdx>,
+    eoi_transitions: FxHashSet<StateIdx>,
     accepting: Option<A>,
 }
 
@@ -33,6 +30,8 @@ impl<A> State<A> {
             char_transitions: Default::default(),
             range_transitions: Default::default(),
             empty_transitions: Default::default(),
+            any_transitions: Default::default(),
+            eoi_transitions: Default::default(),
             accepting: None,
         }
     }
@@ -42,7 +41,6 @@ impl<A> NFA<A> {
     pub fn new() -> NFA<A> {
         NFA {
             states: vec![State::new()],
-            fail: None,
         }
     }
 
@@ -68,13 +66,12 @@ impl<A> NFA<A> {
         self.states[state.0].range_transitions.iter()
     }
 
-    pub fn get_fail_action(&self) -> Option<&A> {
-        self.fail.as_ref()
+    pub fn any_transitions(&self, state: StateIdx) -> impl Iterator<Item = StateIdx> + '_ {
+        self.states[state.0].any_transitions.iter().copied()
     }
 
-    pub fn set_fail_action(&mut self, value: A) {
-        assert!(self.fail.is_none());
-        self.fail = Some(value);
+    pub fn eoi_transitions(&self, state: StateIdx) -> impl Iterator<Item = StateIdx> + '_ {
+        self.states[state.0].eoi_transitions.iter().copied()
     }
 
     pub fn new_state(&mut self) -> StateIdx {
@@ -125,6 +122,14 @@ impl<A> NFA<A> {
         let not_exists = self.states[state.0].empty_transitions.insert(next);
 
         assert!(not_exists, "add_empty_transition");
+    }
+
+    pub fn add_any_transition(&mut self, state: StateIdx, next: StateIdx) {
+        self.states[state.0].any_transitions.insert(next);
+    }
+
+    pub fn add_eoi_transition(&mut self, state: StateIdx, next: StateIdx) {
+        self.states[state.0].eoi_transitions.insert(next);
     }
 
     fn make_state_accepting(&mut self, state: StateIdx, value: A) {
@@ -213,6 +218,8 @@ impl<A> Display for NFA<A> {
                 char_transitions,
                 range_transitions,
                 empty_transitions,
+                any_transitions,
+                eoi_transitions,
                 accepting,
             } = state;
 
@@ -266,10 +273,6 @@ impl<A> Display for NFA<A> {
             {
                 writeln!(f)?;
             }
-        }
-
-        if let Some(_) = self.fail {
-            writeln!(f, "*FAIL")?;
         }
 
         Ok(())

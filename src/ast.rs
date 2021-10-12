@@ -41,17 +41,8 @@ pub enum Rule {
 }
 
 pub struct SingleRule {
-    pub lhs: RuleLhs,
+    pub lhs: Regex,
     pub rhs: RuleRhs,
-}
-
-#[derive(Debug)]
-pub enum RuleLhs {
-    Regex(Regex),
-
-    /// An `_` as the LHS of a rule. This rule only matches when none of the other rules in the
-    /// same rule set match.
-    Fail,
 }
 
 #[derive(Clone)]
@@ -129,6 +120,12 @@ pub enum Regex {
     ZeroOrOne(Box<Regex>),
     Concat(Box<Regex>, Box<Regex>),
     Or(Box<Regex>, Box<Regex>),
+
+    /// Match any character
+    Any,
+
+    /// Match end-of-input
+    Eoi,
 }
 
 #[derive(Debug, Clone)]
@@ -201,7 +198,7 @@ fn parse_regex_2(input: ParseStream) -> syn::Result<Regex> {
     Ok(re)
 }
 
-// re_3 -> ( re_0 ) | $x | 'x' | "..." | [...]
+// re_3 -> ( re_0 ) | $x | 'x' | "..." | [...] | eoi | _
 fn parse_regex_3(input: ParseStream) -> syn::Result<Regex> {
     if input.peek(syn::token::Paren) {
         let parenthesized;
@@ -227,7 +224,15 @@ fn parse_regex_3(input: ParseStream) -> syn::Result<Regex> {
         syn::bracketed!(bracketed in input);
         let char_set = CharSet::parse(&bracketed)?;
         Ok(Regex::CharSet(char_set))
+    } else if input.peek(syn::token::Underscore) {
+        let _ = input.parse::<syn::token::Underscore>()?;
+        Ok(Regex::Any)
     } else {
+        if let Ok(ident) = input.parse::<syn::Ident>() {
+            if ident == "eoi" {
+                return Ok(Regex::Eoi);
+            }
+        }
         Err(syn::Error::new(
             proc_macro2::Span::call_site(),
             "Unable to parse regex",
@@ -258,19 +263,9 @@ impl Parse for CharOrRange {
     }
 }
 
-impl Parse for RuleLhs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        if input.parse::<syn::token::Underscore>().is_ok() {
-            Ok(RuleLhs::Fail)
-        } else {
-            Ok(RuleLhs::Regex(input.parse::<Regex>()?))
-        }
-    }
-}
-
 impl Parse for SingleRule {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let lhs = RuleLhs::parse(input)?;
+        let lhs = Regex::parse(input)?;
 
         let rhs = if input.parse::<syn::token::Comma>().is_ok() {
             RuleRhs::None
