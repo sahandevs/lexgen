@@ -14,6 +14,9 @@ pub struct NFA<A> {
     // but we only need one per NFA for lexing, so we have one action for the entire NFA. (NB. This
     // is different in DFA)
     fail: Option<A>,
+
+    // Action on end-of-input
+    eof: Option<A>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -43,6 +46,7 @@ impl<A> NFA<A> {
         NFA {
             states: vec![State::new()],
             fail: None,
+            eof: None,
         }
     }
 
@@ -75,6 +79,11 @@ impl<A> NFA<A> {
     pub fn set_fail_action(&mut self, value: A) {
         assert!(self.fail.is_none());
         self.fail = Some(value);
+    }
+
+    pub fn set_eof_action(&mut self, value: A) {
+        assert!(self.eof.is_none());
+        self.eof = Some(value);
     }
 
     pub fn new_state(&mut self) -> StateIdx {
@@ -268,8 +277,12 @@ impl<A> Display for NFA<A> {
             }
         }
 
-        if let Some(_) = self.fail {
+        if self.fail.is_some() {
             writeln!(f, "*FAIL")?;
+        }
+
+        if self.eof.is_some() {
+            writeln!(f, "*EOF")?;
         }
 
         Ok(())

@@ -49,6 +49,9 @@ pub struct SingleRule {
 pub enum RuleLhs {
     Regex(Regex),
 
+    /// Matches end-of-input.
+    Eof,
+
     /// An `_` as the LHS of a rule. This rule only matches when none of the other rules in the
     /// same rule set match.
     Fail,
@@ -263,6 +266,11 @@ impl Parse for RuleLhs {
         if input.parse::<syn::token::Underscore>().is_ok() {
             Ok(RuleLhs::Fail)
         } else {
+            if let Ok(ident) = input.parse::<syn::Ident>() {
+                if ident == "eof" {
+                    return Ok(RuleLhs::Eof);
+                }
+            }
             Ok(RuleLhs::Regex(input.parse::<Regex>()?))
         }
     }

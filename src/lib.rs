@@ -66,6 +66,7 @@ pub fn lexer(input: TokenStream) -> TokenStream {
                         match lhs {
                             RuleLhs::Regex(re) => nfa.add_regex(&bindings, &re, rhs),
                             RuleLhs::Fail => nfa.set_fail_action(rhs),
+                            RuleLhs::Eof => nfa.set_eof_action(rhs),
                         }
                     }
 
@@ -91,6 +92,7 @@ pub fn lexer(input: TokenStream) -> TokenStream {
                         match lhs {
                             RuleLhs::Regex(re) => nfa.add_regex(&bindings, &re, rhs),
                             RuleLhs::Fail => nfa.set_fail_action(rhs),
+                            RuleLhs::Eof => nfa.set_eof_action(rhs),
                         }
                     }
 
@@ -120,6 +122,7 @@ pub fn lexer(input: TokenStream) -> TokenStream {
                     match lhs {
                         RuleLhs::Regex(re) => nfa.add_regex(&bindings, &re, rhs),
                         RuleLhs::Fail => nfa.set_fail_action(rhs),
+                        RuleLhs::Eof => nfa.set_eof_action(rhs),
                     }
                 }
 
